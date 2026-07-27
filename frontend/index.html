@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RenderIA - Generador de Renders con IA</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1 class="logo">Render<span>IA</span></h1>
+        <button class="menu-toggle" id="menuToggle">&#9776;</button>
+      </div>
+
+      <div class="sidebar-content">
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-icon">&#128247;</div>
+          <p>Arrastra una imagen o haz clic para cargar</p>
+          <span class="upload-hint">JPG, PNG, WEBP (max 10MB)</span>
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" hidden>
+        </div>
+
+        <div class="preview-container" id="previewContainer" style="display:none;">
+          <img id="previewImage" alt="Vista previa">
+          <button class="btn-remove" id="removeImage">&#10005;</button>
+        </div>
+
+        <div class="form-group">
+          <label>Descripción del Render</label>
+          <textarea id="description" rows="4" placeholder="Ej: Convertir esta fachada en un render arquitectónico moderno, con paredes blancas, madera, grandes ventanas de vidrio..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Tipo de Render</label>
+          <select id="renderType">
+            <option value="arquitectura">Arquitectura</option>
+            <option value="interior">Interior</option>
+            <option value="exterior">Exterior</option>
+            <option value="producto">Producto</option>
+            <option value="paisaje">Paisaje</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Estilo</label>
+          <select id="style">
+            <option value="moderno">Moderno</option>
+            <option value="minimalista">Minimalista</option>
+            <option value="industrial">Industrial</option>
+            <option value="clasico">Clásico</option>
+            <option value="futurista">Futurista</option>
+            <option value="realista">Realista</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Iluminación</label>
+          <select id="lighting">
+            <option value="dia">Día</option>
+            <option value="noche">Noche</option>
+            <option value="atardecer">Atardecer</option>
+            <option value="calida">Cálida</option>
+            <option value="fria">Fría</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Calidad</label>
+          <select id="quality">
+            <option value="estandar">Estándar</option>
+            <option value="alta">Alta</option>
+            <option value="ultra">Ultra</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Relación de Aspecto</label>
+          <select id="aspectRatio">
+            <option value="1:1">1:1</option>
+            <option value="16:9">16:9</option>
+            <option value="4:3">4:3</option>
+            <option value="9:16">9:16 (Vertical)</option>
+          </select>
+        </div>
+
+        <button class="btn-generate" id="generateBtn">
+          <span class="btn-text">GENERAR RENDER</span>
+          <span class="btn-loader" style="display:none;">
+            <span class="spinner"></span> Generando...
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="main-header">
+        <h2>Centro de Resultados</h2>
+      </div>
+
+      <div class="result-area" id="resultArea">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">&#127912;</div>
+          <h3>Carga una imagen para comenzar</h3>
+          <p>Sube una foto, boceto o plano arquitectónico y la IA lo convertirá en un render realista.</p>
+        </div>
+
+        <div class="comparison-container" id="comparisonContainer" style="display:none;">
+          <div class="image-wrapper">
+            <div class="image-card">
+              <h4>Original</h4>
+              <img id="originalResult" alt="Imagen original">
+            </div>
+            <div class="image-card">
+              <h4>Render Generado</h4>
+              <img id="renderResult" alt="Render generado">
+            </div>
+          </div>
+
+          <div class="slider-container" id="sliderContainer" style="display:none;">
+            <img id="sliderOriginal" alt="Original">
+            <img id="sliderRender" alt="Render">
+            <div class="slider-line" id="sliderLine">
+              <span class="slider-handle">&#8596;</span>
+            </div>
+            <input type="range" id="sliderInput" min="0" max="100" value="50">
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn-action" id="regenerateBtn">&#8635; Generar Nuevamente</button>
+            <button class="btn-action" id="compareBtn">&#128269; Comparar Antes/Después</button>
+            <button class="btn-action btn-download" id="downloadBtn">&#11015; Descargar Render</button>
+          </div>
+
+          <div class="prompt-display" id="promptDisplay" style="display:none;">
+            <h4>Prompt utilizado:</h4>
+            <p id="promptText"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="progress-overlay" id="progressOverlay" style="display:none;">
+        <div class="progress-box">
+          <div class="progress-spinner"></div>
+          <h3>Generando tu render...</h3>
+          <p>Esto puede tomar entre 15-60 segundos</p>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" style="display:none;"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
