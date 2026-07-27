@@ -99,19 +99,27 @@ generateBtn.addEventListener('click', async () => {
   setLoading(true);
   showProgress(true);
 
-  const formData = new FormData();
-  formData.append('image', selectedFile);
-  formData.append('description', description);
-  formData.append('renderType', document.getElementById('renderType').value);
-  formData.append('style', document.getElementById('style').value);
-  formData.append('light', document.getElementById('lighting').value);
-  formData.append('quality', document.getElementById('quality').value);
-  formData.append('aspectRatio', document.getElementById('aspectRatio').value);
-
   try {
+    const imageBase64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(selectedFile);
+    });
+
     const response = await fetch('/api/render', {
       method: 'POST',
-      body: formData
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64,
+        mimeType: selectedFile.type,
+        description,
+        renderType: document.getElementById('renderType').value,
+        style: document.getElementById('style').value,
+        light: document.getElementById('lighting').value,
+        quality: document.getElementById('quality').value,
+        aspectRatio: document.getElementById('aspectRatio').value
+      })
     });
 
     const data = await response.json();
