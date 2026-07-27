@@ -1,36 +1,16 @@
 const express = require('express');
-const multer = require('multer');
 const fetch = require('node-fetch');
-const fs = require('fs');
-const path = require('path');
 const { buildPrompt } = require('../utils/promptBuilder');
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: path.join(__dirname, '../../uploads'),
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    cb(null, allowed.includes(file.mimetype));
-  }
-});
-
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    if (!req.file) {
+    const { imageBase64, mimeType, description, renderType, style, light, quality, aspectRatio } = req.body;
+
+    if (!imageBase64) {
       return res.status(400).json({ error: 'No se ha cargado ninguna imagen.' });
     }
-
-    const { description, renderType, style, light, quality, aspectRatio } = req.body;
 
     if (!description || description.trim() === '') {
       return res.status(400).json({ error: 'Por favor, describe el render que deseas generar.' });
@@ -38,7 +18,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     const apiKey = process.env.HUGGINGFACE_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'API key no configurada. Contacta al administrador.' });
+      return res.status(500).json({ error: 'API key no configurada.' });
     }
 
     const { prompt, negative_prompt } = buildPrompt(description, {
@@ -58,10 +38,9 @@ router.post('/', upload.single('image'), async (req, res) => {
       '9:16': '768x1344'
     };
     const aspect = aspectRatio || '1:1';
-    const steps = quality === 'ultra' ? 4 : quality === 'alta' ? 3 : 2;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
 
     const response = await fetch(
       'https://router.huggingface.co/nscale/v1/images/generations',
@@ -76,8 +55,7 @@ router.post('/', upload.single('image'), async (req, res) => {
           prompt: prompt,
           negative_prompt: negative_prompt,
           n: 1,
-          size: sizeMap[aspect] || '1024x1024',
-          num_inference_steps: steps
+          size: sizeMap[aspect] || '1024x1024'
         }),
         signal: controller.signal
       }
@@ -87,11 +65,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Error de la API:', response.status, errorText);
-
-      if (response.status === 503) {
-        return res.status(503).json({ error: 'El modelo esta cargando. Intenta nuevamente en unos segundos.' });
-      }
+      console.error('API Error:', response.status, errorText);
       if (response.status === 429) {
         return res.status(429).json({ error: 'Limite de generacion alcanzado. Intenta mas tarde.' });
       }
@@ -101,32 +75,25 @@ router.post('/', upload.single('image'), async (req, res) => {
     const data = await response.json();
 
     if (!data.data || !data.data[0] || !data.data[0].b64_json) {
-      console.error('Respuesta sin imagen:', JSON.stringify(data).substring(0, 500));
       return res.status(500).json({ error: 'La API no devolvio una imagen valida.' });
     }
 
-    const imageBuffer = Buffer.from(data.data[0].b64_json, 'base64');
+    const renderBase64 = data.data[0].b64_json;
 
-    const outputFilename = `render-${Date.now()}.png`;
-    const outputPath = path.join(__dirname, '../../uploads', outputFilename);
-    fs.writeFileSync(outputPath, imageBuffer);
-
-    console.log('Render generado exitosamente:', outputFilename);
+    console.log('Render generado exitosamente');
 
     res.json({
       success: true,
-      originalImage: `/uploads/${req.file.filename}`,
-      renderImage: `/uploads/${outputFilename}`,
+      originalImage: `data:${mimeType || 'image/png'};base64,${imageBase64}`,
+      renderImage: `data:image/png;base64,${renderBase64}`,
       prompt: prompt
     });
 
   } catch (error) {
-    console.error('Error en la generacion:', error.message || error);
-
+    console.error('Error:', error.message || error);
     if (error.type === 'aborted' || error.name === 'AbortError') {
-      return res.status(504).json({ error: 'La generacion tardo demasiado. Intenta con una configuracion mas simple.' });
+      return res.status(504).json({ error: 'La generacion tardo demasiado.' });
     }
-
     res.status(500).json({ error: `Error interno: ${error.message || 'Intenta nuevamente.'}` });
   }
 });
